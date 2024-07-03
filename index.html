@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,17 +8,22 @@
     <style>
         body {
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
             height: 100vh;
             margin: 0;
             background-color: #f0f0f0;
             font-family: Arial, sans-serif;
         }
+
         #game-container {
             position: relative;
+            margin-top: 20px;
         }
-        #game-over, #start-message {
+
+        #game-over,
+        #start-message,
+        #pause-message {
             position: absolute;
             top: 50%;
             left: 50%;
@@ -29,38 +35,79 @@
             padding: 20px;
             border-radius: 10px;
         }
-        #restart-button {
-            display: block;
-            margin-top: 20px;
+
+        .button {
+            display: inline-block;
+            margin: 5px;
             padding: 10px 20px;
-            font-size: 18px;
-            background-color: #4CAF50;
+            font-size: 16px;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
         }
-        #restart-button:hover {
-            background-color: #45a049;
+
+        .button:hover {
+            opacity: 0.8;
         }
+
+        #restart-button,
+        #start-button {
+            background-color: #4CAF50;
+        }
+
+        #pause-button {
+            background-color: #f39c12;
+        }
+
+        #speed-up-button {
+            background-color: #3498db;
+        }
+
+        #speed-down-button {
+            background-color: #e74c3c;
+        }
+
         #score-board {
-            position: absolute;
-            top: 10px;
-            left: 10px;
             font-size: 20px;
             color: #333;
+            margin-bottom: 10px;
+        }
+
+        #control-panel {
+            margin-bottom: 10px;
+        }
+
+        #speed-input {
+            width: 50px;
+            padding: 5px;
+            margin-right: 5px;
         }
     </style>
 </head>
+
 <body>
+    <div id="score-board">分数: <span id="score">0</span></div>
+    <div id="control-panel">
+        <button id="pause-button" class="button">暂停</button>
+        <button id="restart-button" class="button">重新开始</button>
+        <input type="number" id="speed-input" min="50" max="200" step="10" value="100">
+        <button id="speed-up-button" class="button">加速</button>
+        <button id="speed-down-button" class="button">减速</button>
+    </div>
     <div id="game-container">
         <svg id="game-board" width="420" height="420"></svg>
-        <div id="score-board">分数: <span id="score">0</span></div>
-        <div id="start-message">按任意方向键开始游戏</div>
+        <div id="start-message">
+            按任意方向键或点击"开始"按钮开始游戏
+            <button id="start-button" class="button">开始</button>
+        </div>
+        <div id="pause-message" style="display:none;">
+            游戏已暂停<br>
+            按空格键或点击"暂停"按钮继续
+        </div>
         <div id="game-over" style="display:none;">
             游戏结束<br>
             最终分数: <span id="final-score">0</span>
-            <button id="restart-button">重新开始</button>
         </div>
     </div>
 
@@ -74,7 +121,9 @@
         let food = getRandomPosition();
         let gameLoop;
         let gameStarted = false;
+        let gamePaused = false;
         let score = 0;
+        let gameSpeed = 100;
 
         function getRandomPosition() {
             return {
@@ -128,7 +177,7 @@
 
             if (head.x === food.x && head.y === food.y) {
                 food = getRandomPosition();
-                score += 1; // 更改每次的得分
+                score += 1;
                 document.getElementById("score").textContent = score;
             } else {
                 snake.pop();
@@ -144,50 +193,93 @@
             if (!gameStarted) {
                 gameStarted = true;
                 document.getElementById("start-message").style.display = "none";
-                gameLoop = setInterval(update, 200); // 这里更改移动速度
+                gameLoop = setInterval(update, gameSpeed);
             }
         }
 
-        function endGame() {
-            clearInterval(gameLoop);
-            document.getElementById("game-over").style.display = "block";
-            document.getElementById("final-score").textContent = score;
+        function pauseGame() {
+            if (gameStarted && !gamePaused) {
+                clearInterval(gameLoop);
+                gamePaused = true;
+                document.getElementById("pause-message").style.display = "block";
+                document.getElementById("pause-button").textContent = "继续";
+            } else if (gameStarted && gamePaused) {
+                gameLoop = setInterval(update, gameSpeed);
+                gamePaused = false;
+                document.getElementById("pause-message").style.display = "none";
+                document.getElementById("pause-button").textContent = "暂停";
+            }
         }
 
         function restartGame() {
+            clearInterval(gameLoop);
             snake = [{ x: 10, y: 10 }];
             direction = { x: 1, y: 0 };
             food = getRandomPosition();
             score = 0;
+            gameSpeed = 100;
+            document.getElementById("speed-input").value = gameSpeed;
             document.getElementById("score").textContent = score;
             document.getElementById("game-over").style.display = "none";
+            document.getElementById("pause-message").style.display = "none";
             document.getElementById("game-board").innerHTML = "";
             gameStarted = false;
+            gamePaused = false;
             document.getElementById("start-message").style.display = "block";
+            document.getElementById("pause-button").textContent = "暂停";
             drawBorder();
             snake.forEach(drawSnakePart);
             drawFood();
         }
 
-        document.addEventListener("keydown", (e) => {
-            if (!gameStarted) {
-                if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
-                    startGame();
-                }
+        function changeSpeed(faster) {
+            const speedInput = document.getElementById("speed-input");
+            if (faster) {
+                gameSpeed = Math.max(50, gameSpeed - 10);
+            } else {
+                gameSpeed = Math.min(200, gameSpeed + 10);
             }
+            speedInput.value = gameSpeed;
+            updateGameSpeed();
+        }
 
+        function updateGameSpeed() {
+            const speedInput = document.getElementById("speed-input");
+            gameSpeed = Math.min(200, Math.max(50, parseInt(speedInput.value)));
+            speedInput.value = gameSpeed;
+            if (gameStarted && !gamePaused) {
+                clearInterval(gameLoop);
+                gameLoop = setInterval(update, gameSpeed);
+            }
+        }
+
+        document.addEventListener("keydown", (e) => {
+            if (!gameStarted && ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+                startGame();
+            }
+            if (e.key === " ") {
+                pauseGame();
+            }
             switch (e.key) {
-                case "ArrowUp": direction = { x: 0, y: -1 }; break;
-                case "ArrowDown": direction = { x: 0, y: 1 }; break;
-                case "ArrowLeft": direction = { x: -1, y: 0 }; break;
-                case "ArrowRight": direction = { x: 1, y: 0 }; break;
+                case "ArrowUp": if (direction.y !== 1) direction = { x: 0, y: -1 }; break;
+                case "ArrowDown": if (direction.y !== -1) direction = { x: 0, y: 1 }; break;
+                case "ArrowLeft": if (direction.x !== 1) direction = { x: -1, y: 0 }; break;
+                case "ArrowRight": if (direction.x !== -1) direction = { x: 1, y: 0 }; break;
             }
         });
 
+        document.getElementById("start-button").addEventListener("click", startGame);
+        document.getElementById("pause-button").addEventListener("click", pauseGame);
         document.getElementById("restart-button").addEventListener("click", restartGame);
+        document.getElementById("speed-up-button").addEventListener("click", () => changeSpeed(true));
+        document.getElementById("speed-down-button").addEventListener("click", () => changeSpeed(false));
+        document.getElementById("speed-input").addEventListener("change", updateGameSpeed);
+
+        // 初始绘制
         drawBorder();
         snake.forEach(drawSnakePart);
         drawFood();
     </script>
 </body>
+
 </html>
