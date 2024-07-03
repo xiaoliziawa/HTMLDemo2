@@ -275,7 +275,6 @@
         document.getElementById("speed-down-button").addEventListener("click", () => changeSpeed(false));
         document.getElementById("speed-input").addEventListener("change", updateGameSpeed);
 
-        // 初始绘制
         drawBorder();
         snake.forEach(drawSnakePart);
         drawFood();
